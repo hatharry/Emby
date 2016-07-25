@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CommonIO;
-using MediaBrowser.Common.IO;
 
 namespace MediaBrowser.Controller.Providers
 {
@@ -102,6 +101,12 @@ namespace MediaBrowser.Controller.Providers
         public FileSystemMetadata GetFile(string path)
         {
             var directory = Path.GetDirectoryName(path);
+
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                _logger.Debug("Parent path is null for {0}", path);
+                return null;
+            }
 
             var dict = GetFileSystemDictionary(directory, false);
 

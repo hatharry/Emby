@@ -1,9 +1,4 @@
-﻿using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Providers;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System;
 
 namespace MediaBrowser.Controller.Entities
 {
@@ -22,13 +17,15 @@ namespace MediaBrowser.Controller.Entities
         /// Gets the date modified.
         /// </summary>
         /// <value>The date modified.</value>
-        DateTime DateModified { get; }
+        DateTime DateModified { get; set; }
 
         /// <summary>
         /// Gets or sets the date last saved.
         /// </summary>
         /// <value>The date last saved.</value>
         DateTime DateLastSaved { get; set; }
+
+        SourceType SourceType { get; set; }
 
         /// <summary>
         /// Gets or sets the date last refreshed.
@@ -52,5 +49,9 @@ namespace MediaBrowser.Controller.Entities
         /// </summary>
         /// <value><c>true</c> if [supports people]; otherwise, <c>false</c>.</value>
         bool SupportsPeople { get; }
+
+        bool RequiresRefresh();
+
+        bool EnableForceSaveOnDateModifiedChange { get; }
     }
 }
