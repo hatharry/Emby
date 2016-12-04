@@ -192,6 +192,10 @@
     <Content Include="x86\sqlite3.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\Tools\Service\Emby.Service.exe">
+      <Link>Emby.Service.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BDInfo\BDInfo.csproj">

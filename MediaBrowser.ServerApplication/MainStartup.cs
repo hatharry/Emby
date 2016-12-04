@@ -42,7 +42,7 @@ namespace MediaBrowser.ServerApplication
         private static ILogger _logger;
 
         public static bool IsRunningAsService = false;
-        private static bool _canRestartService = false;
+        public static bool NoRestart = false;
         private static bool _appHostDisposed;
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -61,10 +61,7 @@ namespace MediaBrowser.ServerApplication
             var options = new StartupOptions(Environment.GetCommandLineArgs());
             IsRunningAsService = options.ContainsOption("-service");
 
-            if (IsRunningAsService)
-            {
-                //_canRestartService = CanRestartWindowsService();
-            }
+            NoRestart = options.ContainsOption("-norestart");
 
             var currentProcess = Process.GetCurrentProcess();
 
@@ -263,14 +260,7 @@ namespace MediaBrowser.ServerApplication
         {
             get
             {
-                if (IsRunningAsService)
-                {
-                    return _canRestartService;
-                }
-                else
-                {
-                    return true;
-                }
+                return !IsRunningAsService;
             }
         }
 
@@ -282,18 +272,7 @@ namespace MediaBrowser.ServerApplication
         {
             get
             {
-#if DEBUG
-                return false;
-#endif
-
-                if (IsRunningAsService)
-                {
-                    return _canRestartService;
-                }
-                else
-                {
-                    return true;
-                }
+                return !IsRunningAsService;
             }
         }
 
@@ -340,7 +319,7 @@ namespace MediaBrowser.ServerApplication
             var task = _appHost.Init(initProgress);
             Task.WaitAll(task);
 
-            if (!runService)
+            if (!runService && !options.ContainsOption("-notray"))
             {
                 task = InstallVcredist2013IfNeeded(_appHost, _logger);
                 Task.WaitAll(task);
@@ -367,7 +346,15 @@ namespace MediaBrowser.ServerApplication
 
                 HideSplashScreen();
 
-                ShowTrayIcon();
+                if (!options.ContainsOption("-notray"))
+                {
+                    ShowTrayIcon();
+                }
+                else
+                {
+                    _mainTaskScheduler = TaskScheduler.FromCurrentSynchronizationContext();
+                    Application.Run();
+                }
             }
         }
 
@@ -604,7 +591,7 @@ namespace MediaBrowser.ServerApplication
                 // Update is there - execute update
                 try
                 {
-                    var serviceName = IsRunningAsService ? BackgroundService.GetExistingServiceName() : string.Empty;
+                    var serviceName = IsRunningAsService || NoRestart ? BackgroundService.GetExistingServiceName() : string.Empty;
                     new ApplicationUpdater().UpdateApplication(appPaths, updateArchive, logger, serviceName);
 
                     // And just let the app exit so it can update
@@ -639,9 +626,9 @@ namespace MediaBrowser.ServerApplication
         {
             DisposeAppHost();
 
-            if (IsRunningAsService)
+            if (NoRestart)
             {
-                RestartWindowsService();
+                ShutdownWindowsApplication(3);
             }
             else
             {
@@ -668,7 +655,7 @@ namespace MediaBrowser.ServerApplication
             }
         }
 
-        private static void ShutdownWindowsApplication()
+        private static void ShutdownWindowsApplication(int code = 0)
         {
             if (_serverNotifyIcon != null)
             {
@@ -679,7 +666,7 @@ namespace MediaBrowser.ServerApplication
             _logger.Info("Calling Application.Exit");
             //Application.Exit();
 
-            Environment.Exit(0);
+            Environment.Exit(code);
         }
 
         private static void ShutdownWindowsService()
@@ -693,22 +680,6 @@ namespace MediaBrowser.ServerApplication
             {
                 service.Stop();
             }
-        }
-
-        private static void RestartWindowsService()
-        {
-            _logger.Info("Restarting background service");
-
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                Verb = "runas",
-                ErrorDialog = false,
-                Arguments = String.Format("/c sc stop {0} & sc start {0} & sc start {0}", BackgroundService.GetExistingServiceName())
-            };
-            Process.Start(startInfo);
         }
 
         private static async Task InstallVcredist2013IfNeeded(ApplicationHost appHost, ILogger logger)
